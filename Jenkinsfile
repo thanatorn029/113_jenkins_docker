@@ -36,6 +36,7 @@ pipeline {
                 }
             }
         }
+        
 
         stage('Validate') {
             steps {
@@ -105,29 +106,28 @@ EOF
             }
         }
 
-        stage('Health Check') {
-            steps {
-                script {
-                    echo "Waiting for services to start..."
-                    sh 'sleep 15'
+       stage('Health Check') {
+    steps {
+        script {
+            echo "Waiting for services to start..."
+            sh 'sleep 15'
 
-                    echo "Performing health check..."
+            echo "Performing health check..."
+            sh """
+                docker compose ps
 
-                    sh """
-                        # Check if containers are running
-                        docker compose ps
+                # ตรวจสอบ API ว่าพร้อมใช้งาน
+                timeout 60 bash -c 'until curl -f http://localhost:3001/health; do sleep 2; done' || exit 1
 
-                        # Wait for API to be ready (max 60 seconds)
-                        timeout 60 bash -c 'until curl -f http://localhost:3001/health; do sleep 2; done' || exit 1
+                # ตรวจสอบ endpoint /circuits
+                curl -f http://localhost:3001/circuits || exit 1
 
-                        # Check attractions endpoint
-                        curl -f http://localhost:3001/circuits || exit 1
-
-                        echo "Health check passed!"
-                    """
-                }
-            }
+                echo "Health check passed!"
+            """
         }
+    }
+}
+
 
         stage('Verify Deployment') {
             steps {

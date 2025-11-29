@@ -1,0 +1,50 @@
+version: "3.9"
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: f1_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: f1_db
+      MYSQL_USER: f1_user
+      MYSQL_PASSWORD: f1_pass
+      TZ: Asia/Bangkok
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks: [stack]
+
+  api:
+    build: ./01_api
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: f1_db
+      DB_USER: f1_user
+      DB_PASSWORD: f1_pass
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    depends_on: [mysql]
+    networks: [stack]
+
+  frontend:
+    build:
+      context: ./02_frontend
+      args:
+        - API_HOST=http://localhost:3001
+    environment:
+      NEXT_PUBLIC_API_HOST: http://localhost:3001
+    ports:
+      - "3000:3000"
+    depends_on: [api]
+    networks: [stack]
+
+volumes:
+  mysql_data:
+
+networks:
+  stack:
+    driver: bridge
